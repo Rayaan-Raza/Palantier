@@ -9,107 +9,102 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 /**
- * LoginForm — A Swing JFrame that displays the user login form.
- *
- * Contains text fields for email and password.
- * Validates credentials through UserManager and shows appropriate dialogs.
- * On successful login, opens the DashboardFrame.
+ * LoginForm — Premium dark-themed login window for Palantier.
  */
 public class LoginForm extends JFrame {
 
-    // Form input fields
     private JTextField emailField;
     private JPasswordField passwordField;
-
-    // Reference to the shared UserManager
     private UserManager userManager;
 
-    /**
-     * Creates and displays the Login form window.
-     *
-     * @param userManager the shared UserManager instance
-     */
     public LoginForm(UserManager userManager) {
         this.userManager = userManager;
         initializeUI();
     }
 
-    /**
-     * Sets up the entire user interface for the login form.
-     */
     private void initializeUI() {
 
-        // ── Window settings ─────────────────────────────────────────────
         setTitle("Palantier — Login");
-        setSize(420, 300);
+        setSize(480, 480);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // Center on screen
+        setLocationRelativeTo(null);
         setResizable(false);
 
-        // ── Main panel with padding ─────────────────────────────────────
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BorderLayout(10, 10));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        // ── Gradient background ─────────────────────────────────────────
+        JPanel background = UITheme.createGradientBackground();
+        background.setLayout(new GridBagLayout());
+        setContentPane(background);
 
-        // ── Title label ─────────────────────────────────────────────────
-        JLabel titleLabel = new JLabel("Login to Palantier", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
-        mainPanel.add(titleLabel, BorderLayout.NORTH);
+        // ── Card panel ──────────────────────────────────────────────────
+        JPanel card = UITheme.createCardPanel();
+        card.setLayout(new GridBagLayout());
+        card.setPreferredSize(new Dimension(400, 400));
 
-        // ── Form panel (labels + fields) ────────────────────────────────
-        JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 5, 10, 5);
+        gbc.gridx = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Row 0: Email
-        gbc.gridx = 0;
+        // ── Brand logo text ─────────────────────────────────────────────
         gbc.gridy = 0;
-        gbc.weightx = 0;
-        formPanel.add(new JLabel("Email:"), gbc);
+        gbc.insets = new Insets(32, 36, 2, 36);
+        JLabel brandLabel = UITheme.createLabel("◆ Palantier", UITheme.FONT_LABEL, UITheme.ACCENT_PRIMARY);
+        card.add(brandLabel, gbc);
 
-        emailField = new JTextField(20);
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        formPanel.add(emailField, gbc);
-
-        // Row 1: Password
-        gbc.gridx = 0;
+        // ── Title ───────────────────────────────────────────────────────
         gbc.gridy = 1;
-        gbc.weightx = 0;
-        formPanel.add(new JLabel("Password:"), gbc);
+        gbc.insets = new Insets(4, 36, 2, 36);
+        JLabel titleLabel = UITheme.createLabel("Welcome back", UITheme.FONT_TITLE, UITheme.TEXT_PRIMARY);
+        card.add(titleLabel, gbc);
 
-        passwordField = new JPasswordField(20);
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        formPanel.add(passwordField, gbc);
+        // ── Subtitle ────────────────────────────────────────────────────
+        gbc.gridy = 2;
+        gbc.insets = new Insets(0, 36, 24, 36);
+        JLabel subtitleLabel = UITheme.createLabel("Sign in to continue to your dashboard",
+                UITheme.FONT_SUBTITLE, UITheme.TEXT_SECONDARY);
+        card.add(subtitleLabel, gbc);
 
-        mainPanel.add(formPanel, BorderLayout.CENTER);
+        // ── Email ───────────────────────────────────────────────────────
+        gbc.gridy = 3;
+        gbc.insets = new Insets(0, 36, 4, 36);
+        card.add(UITheme.createLabel("Email Address", UITheme.FONT_LABEL, UITheme.TEXT_SECONDARY), gbc);
 
-        // ── Bottom panel (buttons) ──────────────────────────────────────
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        gbc.gridy = 4;
+        gbc.insets = new Insets(0, 36, 16, 36);
+        emailField = UITheme.createStyledTextField(20);
+        card.add(emailField, gbc);
 
-        JButton loginButton = new JButton("Login");
-        loginButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        loginButton.setPreferredSize(new Dimension(100, 35));
-        bottomPanel.add(loginButton);
+        // ── Password ────────────────────────────────────────────────────
+        gbc.gridy = 5;
+        gbc.insets = new Insets(0, 36, 4, 36);
+        card.add(UITheme.createLabel("Password", UITheme.FONT_LABEL, UITheme.TEXT_SECONDARY), gbc);
 
-        JButton switchToSignupButton = new JButton("Don't have an account? Sign Up");
-        switchToSignupButton.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        switchToSignupButton.setBorderPainted(false);
-        switchToSignupButton.setContentAreaFilled(false);
-        switchToSignupButton.setForeground(new Color(0, 102, 204));
-        switchToSignupButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        bottomPanel.add(switchToSignupButton);
+        gbc.gridy = 6;
+        gbc.insets = new Insets(0, 36, 24, 36);
+        passwordField = UITheme.createStyledPasswordField(20);
+        card.add(passwordField, gbc);
 
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+        // ── Login button ────────────────────────────────────────────────
+        gbc.gridy = 7;
+        gbc.insets = new Insets(0, 36, 14, 36);
+        JButton loginButton = UITheme.createPrimaryButton("Sign In");
+        card.add(loginButton, gbc);
 
-        // ── Add main panel to frame ─────────────────────────────────────
-        add(mainPanel);
+        // ── Switch to Signup link ───────────────────────────────────────
+        gbc.gridy = 8;
+        gbc.insets = new Insets(0, 36, 28, 36);
+        JPanel linkPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        linkPanel.setOpaque(false);
+        JLabel noAccountLabel = UITheme.createLabel("Don't have an account?  ",
+                UITheme.FONT_LINK, UITheme.TEXT_MUTED);
+        JButton signupLink = UITheme.createLinkButton("Create one");
+        linkPanel.add(noAccountLabel);
+        linkPanel.add(signupLink);
+        card.add(linkPanel, gbc);
 
-        // ── Button actions ──────────────────────────────────────────────
+        // ── Add card to background ──────────────────────────────────────
+        background.add(card);
 
-        // Login button click handler
+        // ── Actions ─────────────────────────────────────────────────────
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -117,36 +112,24 @@ public class LoginForm extends JFrame {
             }
         });
 
-        // Switch to Signup form
-        switchToSignupButton.addActionListener(new ActionListener() {
+        signupLink.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                dispose(); // Close this window
+                dispose();
                 new SignupForm(userManager).setVisible(true);
             }
         });
     }
 
-    /**
-     * Reads form fields, calls UserManager.login(), and shows the result.
-     */
     private void handleLogin() {
         String email = emailField.getText();
         String password = new String(passwordField.getPassword());
 
-        // Call UserManager — returns User on success, or null on failure
         User loggedInUser = userManager.login(email, password);
 
         if (loggedInUser == null) {
-            // Show the specific error message from UserManager
-            JOptionPane.showMessageDialog(this,
-                    userManager.getLoginError(),
-                    "Login Failed", JOptionPane.ERROR_MESSAGE);
+            UITheme.showError(this, userManager.getLoginError());
         } else {
-            // Login successful — open Dashboard
-            JOptionPane.showMessageDialog(this,
-                    "Login Successful! Welcome, " + loggedInUser.getFullName() + "!",
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
             dispose();
             new DashboardFrame(loggedInUser, userManager).setVisible(true);
         }
