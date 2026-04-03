@@ -1,7 +1,8 @@
 package palantier.ui;
 
 import javax.swing.*;
-import javax.swing.border.Border;
+import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -300,6 +301,269 @@ public class UITheme {
         };
         panel.setOpaque(true);
         return panel;
+    }
+
+    /**
+     * Creates a styled JComboBox matching the dark theme.
+     * Forces dark colours even on Windows system look-and-feel.
+     */
+    public static JComboBox<String> createStyledComboBox(String[] items) {
+        JComboBox<String> combo = new JComboBox<>(items);
+        combo.setUI(new BasicComboBoxUI() {
+            @Override
+            protected JButton createArrowButton() {
+                JButton arrow = new JButton() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setColor(BG_INPUT);
+                        g2.fillRect(0, 0, getWidth(), getHeight());
+
+                        int midX = getWidth() / 2;
+                        int midY = getHeight() / 2;
+                        Polygon triangle = new Polygon(
+                                new int[]{midX - 4, midX + 4, midX},
+                                new int[]{midY - 2, midY - 2, midY + 3},
+                                3);
+                        g2.setColor(TEXT_SECONDARY);
+                        g2.fillPolygon(triangle);
+                        g2.dispose();
+                    }
+                };
+                arrow.setPreferredSize(new Dimension(32, 0));
+                arrow.setBorder(BorderFactory.createEmptyBorder());
+                arrow.setFocusPainted(false);
+                arrow.setContentAreaFilled(false);
+                arrow.setBorderPainted(false);
+                arrow.setOpaque(false);
+                return arrow;
+            }
+
+            @Override
+            public void paintCurrentValueBackground(Graphics g, Rectangle bounds, boolean hasFocus) {
+                g.setColor(hasFocus ? BG_INPUT_FOCUS : BG_INPUT);
+                g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+            }
+        });
+        combo.setFont(FONT_INPUT);
+        combo.setBackground(BG_INPUT);
+        combo.setForeground(TEXT_PRIMARY);
+        combo.setOpaque(true);
+        combo.setPreferredSize(new Dimension(combo.getPreferredSize().width, 38));
+        combo.setBorder(BorderFactory.createLineBorder(BORDER_DEFAULT, 1, true));
+
+        // Force dark theme on the combo popup list
+        Object popup = combo.getUI().getAccessibleChild(combo, 0);
+        if (popup instanceof JPopupMenu) {
+            JPopupMenu pm = (JPopupMenu) popup;
+            pm.setBorder(BorderFactory.createLineBorder(BORDER_DEFAULT));
+            for (Component c : pm.getComponents()) {
+                if (c instanceof JScrollPane) {
+                    JScrollPane sp = (JScrollPane) c;
+                    sp.getViewport().setBackground(BG_INPUT);
+                }
+            }
+        }
+
+        // Style the dropdown renderer — handles both the closed display and the list
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                setFont(FONT_INPUT);
+                list.setBackground(BG_INPUT);
+                list.setForeground(TEXT_PRIMARY);
+                list.setSelectionBackground(ACCENT_PRIMARY);
+                list.setSelectionForeground(Color.WHITE);
+                if (isSelected) {
+                    setBackground(ACCENT_PRIMARY);
+                    setForeground(Color.WHITE);
+                } else {
+                    setBackground(BG_INPUT);
+                    setForeground(TEXT_PRIMARY);
+                }
+                setOpaque(true);
+                setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+                return this;
+            }
+        });
+
+        // Force the editor/button sub-components to use dark colours
+        for (Component child : combo.getComponents()) {
+            if (child instanceof JButton) {
+                JButton arrow = (JButton) child;
+                arrow.setBackground(BG_INPUT);
+                arrow.setBorder(BorderFactory.createEmptyBorder());
+            }
+        }
+
+        return combo;
+    }
+
+    /**
+     * Creates a styled JTextArea matching the dark theme.
+     */
+    public static JTextArea createStyledTextArea(int rows, int columns) {
+        JTextArea area = new JTextArea(rows, columns);
+        area.setFont(FONT_INPUT);
+        area.setBackground(BG_INPUT);
+        area.setForeground(TEXT_PRIMARY);
+        area.setCaretColor(TEXT_PRIMARY);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+
+        area.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                area.setBackground(BG_INPUT_FOCUS);
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                area.setBackground(BG_INPUT);
+            }
+        });
+
+        return area;
+    }
+
+    /**
+     * Applies dark styling to scroll panes, including scrollbar buttons/arrows.
+     */
+    public static void styleScrollPane(JScrollPane scrollPane) {
+        scrollPane.setBackground(BG_INPUT);
+        scrollPane.getViewport().setBackground(BG_INPUT);
+
+        JScrollBar vertical = scrollPane.getVerticalScrollBar();
+        vertical.setBackground(BG_INPUT);
+        vertical.setUI(createDarkScrollBarUI());
+
+        JScrollBar horizontal = scrollPane.getHorizontalScrollBar();
+        horizontal.setBackground(BG_INPUT);
+        horizontal.setUI(createDarkScrollBarUI());
+    }
+
+    private static BasicScrollBarUI createDarkScrollBarUI() {
+        return new BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                thumbColor = new Color(66, 66, 94);
+                trackColor = BG_INPUT;
+            }
+
+            @Override
+            protected JButton createDecreaseButton(int orientation) {
+                return createScrollButton(orientation);
+            }
+
+            @Override
+            protected JButton createIncreaseButton(int orientation) {
+                return createScrollButton(orientation);
+            }
+
+            private JButton createScrollButton(int orientation) {
+                JButton button = new JButton() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setColor(BG_INPUT);
+                        g2.fillRect(0, 0, getWidth(), getHeight());
+
+                        int midX = getWidth() / 2;
+                        int midY = getHeight() / 2;
+                        Polygon triangle;
+                        if (orientation == SwingConstants.NORTH) {
+                            triangle = new Polygon(new int[]{midX - 4, midX + 4, midX},
+                                    new int[]{midY + 2, midY + 2, midY - 3}, 3);
+                        } else if (orientation == SwingConstants.SOUTH) {
+                            triangle = new Polygon(new int[]{midX - 4, midX + 4, midX},
+                                    new int[]{midY - 2, midY - 2, midY + 3}, 3);
+                        } else if (orientation == SwingConstants.WEST) {
+                            triangle = new Polygon(new int[]{midX + 2, midX + 2, midX - 3},
+                                    new int[]{midY - 4, midY + 4, midY}, 3);
+                        } else {
+                            triangle = new Polygon(new int[]{midX - 2, midX - 2, midX + 3},
+                                    new int[]{midY - 4, midY + 4, midY}, 3);
+                        }
+                        g2.setColor(TEXT_SECONDARY);
+                        g2.fillPolygon(triangle);
+                        g2.dispose();
+                    }
+                };
+                button.setBorder(BorderFactory.createEmptyBorder());
+                button.setFocusPainted(false);
+                button.setContentAreaFilled(false);
+                button.setBorderPainted(false);
+                button.setOpaque(false);
+                return button;
+            }
+        };
+    }
+
+    /**
+     * Creates a secondary outline-style button for filter/cancel actions.
+     */
+    public static JButton createSecondaryButton(String text) {
+        JButton button = new JButton(text) {
+            private boolean hovering = false;
+
+            {
+                addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        hovering = true;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        hovering = false;
+                        repaint();
+                    }
+                });
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                if (hovering) {
+                    g2.setColor(new Color(ACCENT_PRIMARY.getRed(), ACCENT_PRIMARY.getGreen(),
+                            ACCENT_PRIMARY.getBlue(), 30));
+                } else {
+                    g2.setColor(BG_INPUT);
+                }
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 12, 12));
+
+                // Border
+                g2.setColor(hovering ? ACCENT_PRIMARY : BORDER_DEFAULT);
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 12, 12));
+
+                // Text
+                g2.setColor(hovering ? ACCENT_HOVER : TEXT_SECONDARY);
+                g2.setFont(getFont());
+                FontMetrics fm = g2.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(getText(), textX, textY);
+
+                g2.dispose();
+            }
+        };
+        button.setFont(FONT_BUTTON);
+        button.setForeground(TEXT_SECONDARY);
+        button.setPreferredSize(new Dimension(button.getPreferredSize().width, 38));
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
     }
 
     /**
