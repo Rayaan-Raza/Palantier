@@ -2,25 +2,21 @@ package palantier.service;
 
 import palantier.model.User;
 
-import java.io.*;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
  * UserManager handles all user-related business logic:
  * - Signup (with validation and duplicate checking)
  * - Login (credential verification)
- * - Persistence (save/load users to/from a file)
+ * - Persistence (save/load users to/from SQLite)
  *
- * Users are stored in an ArrayList and persisted using Java Object
- * Serialization.
- * The data file is called "users.dat" and is created automatically on first
- * signup.
+ * Users are cached in memory and persisted to SQLite.
  */
 public class UserManager {
-
-    // File where user data is stored (in the working directory)
-    private static final String DATA_FILE = "users.dat";
 
     // Simple regex pattern for basic email validation
     // Matches: something@something.something
@@ -34,6 +30,7 @@ public class UserManager {
      * If no data file exists yet (first run), starts with an empty list.
      */
     public UserManager() {
+        DatabaseManager.initializeDatabase();
         users = loadUsers();
     }
 
@@ -139,6 +136,30 @@ public class UserManager {
     }
 
     // ══════════════════════════════════════════════════════════════════════
+    // USER LIST ACCESS (for task assignment dropdowns)
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Returns a copy of the full user list.
+     * Used by the UI to populate assignee dropdowns in task forms.
+     *
+     * @return ArrayList of all registered Users
+     */
+    public ArrayList<User> getAllUsers() {
+        return new ArrayList<>(users);
+    }
+
+    /**
+     * Returns true if a user with this email exists.
+     */
+    public boolean isValidUserEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        return findUserByEmail(email.trim()) != null;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
     // HELPER METHODS
     // ══════════════════════════════════════════════════════════════════════
 
@@ -164,7 +185,7 @@ public class UserManager {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // FILE PERSISTENCE (Serialization)
+    // DATABASE PERSISTENCE (SQLite)
     // ══════════════════════════════════════════════════════════════════════
 
     /**
@@ -172,11 +193,24 @@ public class UserManager {
      * This is called automatically after every successful signup.
      */
     private void saveUsers() {
-        try (ObjectOutputStream out = new ObjectOutputStream(
-                new FileOutputStream(DATA_FILE))) {
-            out.writeObject(users);
-        } catch (IOException e) {
-            System.err.println("Warning: Could not save users to file: " + e.getMessage());
+        try {
+            MongoCollection<Document> collection = DatabaseManager.getDatabase().getCollection("users");
+            collection.deleteMany(new Document());
+            
+            if (users.isEmpty()) {
+                return;
+            }
+            
+            List<Document> docs = new ArrayList<>();
+            for (User user : users) {
+                Document doc = new Document("email", user.getEmail())
+                        .append("full_name", user.getFullName())
+                        .append("password", user.getPassword());
+                docs.add(doc);
+            }
+            collection.insertMany(docs);
+        } catch (Exception e) {
+            System.err.println("Warning: Could not save users to database: " + e.getMessage());
         }
     }
 
@@ -185,26 +219,19 @@ public class UserManager {
      * If the file does not exist (first run) or is corrupted, returns an empty
      * list.
      */
-    @SuppressWarnings("unchecked")
     private ArrayList<User> loadUsers() {
-        File file = new File(DATA_FILE);
-
-        // If the file doesn't exist yet, return empty list (first run)
-        if (!file.exists()) {
-            return new ArrayList<>();
-        }
-
-        try (ObjectInputStream in = new ObjectInputStream(
-                new FileInputStream(file))) {
-            Object obj = in.readObject();
-            if (obj instanceof ArrayList) {
-                return (ArrayList<User>) obj;
+        ArrayList<User> loaded = new ArrayList<>();
+        try {
+            MongoCollection<Document> collection = DatabaseManager.getDatabase().getCollection("users");
+            for (Document doc : collection.find()) {
+                loaded.add(new User(
+                        doc.getString("full_name"),
+                        doc.getString("email"),
+                        doc.getString("password")));
             }
-        } catch (IOException | ClassNotFoundException e) {
-            System.err.println("Warning: Could not load users from file: " + e.getMessage());
-            System.err.println("Starting with an empty user list.");
+        } catch (Exception e) {
+            System.err.println("Warning: Could not load users from database: " + e.getMessage());
         }
-
-        return new ArrayList<>();
+        return loaded;
     }
 }
